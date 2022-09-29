@@ -1,0 +1,22 @@
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      file-size-threshold: 200KB
+      max-file-size:       500MB
+      max-request-size:    500MB
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:usersdb;MODE=PostgreSQL
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /db-console
+      settings:
+        web-allow-others: false
+
+logging:
+  level:
+    org.springframework.web.client: OFF
