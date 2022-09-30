@@ -15,6 +15,7 @@ import ru.nessing.test_task.repositories.IntersectionRepository;
 import ru.nessing.test_task.repositories.NamesRepository;
 import ru.nessing.test_task.repositories.PathsRepository;
 import ru.nessing.test_task.repositories.ResultRepository;
+import ru.nessing.test_task.services.methods.serverMethods;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,37 +70,24 @@ public class ServerService {
             System.out.println();
             return;
         }
-        ArrayList<IntersectionDto> intersections = new ArrayList<>();
+        ArrayList<IntersectionDto> intersectionDtoList = new ArrayList<>();
         Result result = resultRepository.findAllById(id);
         ResultDto resultDto = dtoMethods.resultToDto(result);
         resultDto.setStates(States.LOADING);
         resultRepository.save(dtoMethods.getResult(resultDto));
 
-        String path = createFolder(file, id);
+        String path = serverMethods.createFolder(file, id);
 
         List<List<String>> list = zipHelper.parseFolder(new File(path));
 
-        collect(intersections, list);
+        collect(intersectionDtoList, list);
 
-        resultDto.setIntersectionList(intersections);
+        resultDto.setIntersectionList(intersectionDtoList);
         resultDto.setStates(States.READY);
         resultRepository.save(dtoMethods.getResult(resultDto));
     }
 
-    private String createFolder(MultipartFile file, Long id) throws IOException {
-        String path = "serverFiles/" + id;
-        File dir = new File(path);
-        dir.mkdirs();
-        File tempFile = new File(path + "/" + file.getOriginalFilename());
-        tempFile.createNewFile();
-
-        file.transferTo(tempFile.getAbsoluteFile());
-        zipHelper.unzip(path + "/" + file.getOriginalFilename(), path);
-        tempFile.delete();
-        return path;
-    }
-
-    private void collect(ArrayList<IntersectionDto> intersections, List<List<String>> list) {
+    private void collect(ArrayList<IntersectionDto> intersectionDtoList, List<List<String>> list) {
         for (List<String> arr : list) {
             List<PathDto> paths = new ArrayList<>();
             PathDto pathDto1 = PathDto.builder()
@@ -131,7 +119,7 @@ public class ServerService {
             }
             intersectionDto.setNames(names);
             intersectionDto.setPaths(paths);
-            intersections.add(dtoMethods.getIntersectionDto(
+            intersectionDtoList.add(dtoMethods.getIntersectionDto(
                     intersectionRepository.save(dtoMethods.getIntersection(intersectionDto))
             ));
         }
