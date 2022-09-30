@@ -73,6 +73,7 @@ public class Client {
         RestTemplate restTemplateStartFile = new RestTemplate();
         ResponseEntity<String> startFile = restTemplateStartFile
                 .postForEntity(serverUrl, requestEntity, String.class);
+        System.out.println(startFile.getBody());
     }
 
     private static void result(String command) {

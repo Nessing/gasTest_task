@@ -52,6 +52,7 @@
             <scope>test</scope>
         </dependency>
 
+    <!-- work with DOCX -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>

@@ -3,12 +3,17 @@ package ru.nessing.test_task.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import ru.nessing.test_task.Entities.*;
+import ru.nessing.test_task.DTO.IntersectionDto;
+import ru.nessing.test_task.DTO.NameDto;
+import ru.nessing.test_task.DTO.PathDto;
+import ru.nessing.test_task.DTO.ResultDto;
+import ru.nessing.test_task.Entities.Result;
 import ru.nessing.test_task.enums.States;
+import ru.nessing.test_task.methods.DtoMethods;
 import ru.nessing.test_task.methods.ZipHelperServer;
+import ru.nessing.test_task.repositories.IntersectionRepository;
 import ru.nessing.test_task.repositories.NamesRepository;
 import ru.nessing.test_task.repositories.PathsRepository;
-import ru.nessing.test_task.repositories.IntersectionRepository;
 import ru.nessing.test_task.repositories.ResultRepository;
 
 import java.io.File;
@@ -26,17 +31,20 @@ public class ServerService {
 
     private Long id;
     private ZipHelperServer zipHelper = new ZipHelperServer();
+    private DtoMethods dtoMethods = new DtoMethods();
 
     public String result(Long id) {
-        Result result = resultRepository.findAllById(id);
+        Result result = resultRepository.findById(id).orElse(null);
         if (result == null) return States.NO_FOUND.toString();
-        if (result.getStates() == States.READY) {
+        ResultDto resultDto = dtoMethods.resultToDto(result);
+
+        if (resultDto.getStates() == States.READY) {
             StringBuilder builder = new StringBuilder();
-            for (Intersection intersection : result.getIntersectionList()) {
+            for (IntersectionDto intersection : resultDto.getIntersectionList()) {
                 builder.append("-- a couple of files --\n");
-                intersection.getPaths().stream().forEach(path -> builder.append(path.getPath() + "\n"));
+                intersection.getPaths().forEach(path -> builder.append(path.getPath() + "\n"));
                 builder.append("-- names ---\n");
-                intersection.getNames().stream().forEach(name -> builder.append(name.getFullName() + "\n"));
+                intersection.getNames().forEach(name -> builder.append(name.getFullName() + "\n"));
             }
             return builder.toString();
         }
@@ -53,62 +61,79 @@ public class ServerService {
 
     public void load(MultipartFile file, Long id) throws IOException {
         this.id = id;
-        if(file.isEmpty()) {
-            Result result = resultRepository.findAllById(id);
-            result.setStates(States.ERROR);
-            resultRepository.save(result);
+        if (file.isEmpty()) {
+            Result result = resultRepository.findById(id).orElse(null);
+            ResultDto resultDto = dtoMethods.resultToDto(result);
+            resultDto.setStates(States.ERROR);
+            resultRepository.save(dtoMethods.getResult(resultDto));
+            System.out.println();
             return;
         }
-        ArrayList<Intersection> intersections = new ArrayList<>();
+        ArrayList<IntersectionDto> intersections = new ArrayList<>();
         Result result = resultRepository.findAllById(id);
-        result.setStates(States.LOADING);
-        resultRepository.save(result);
+        ResultDto resultDto = dtoMethods.resultToDto(result);
+        resultDto.setStates(States.LOADING);
+        resultRepository.save(dtoMethods.getResult(resultDto));
+
+        String path = createFolder(file, id);
+
+        List<List<String>> list = zipHelper.parseFolder(new File(path));
+
+        collect(intersections, list);
+
+        resultDto.setIntersectionList(intersections);
+        resultDto.setStates(States.READY);
+        resultRepository.save(dtoMethods.getResult(resultDto));
+    }
+
+    private String createFolder(MultipartFile file, Long id) throws IOException {
         String path = "serverFiles/" + id;
         File dir = new File(path);
         dir.mkdirs();
         File tempFile = new File(path + "/" + file.getOriginalFilename());
         tempFile.createNewFile();
-        List<List<String>> list;
 
         file.transferTo(tempFile.getAbsoluteFile());
         zipHelper.unzip(path + "/" + file.getOriginalFilename(), path);
         tempFile.delete();
-        list = zipHelper.parseFolder(new File(path));
+        return path;
+    }
 
+    private void collect(ArrayList<IntersectionDto> intersections, List<List<String>> list) {
         for (List<String> arr : list) {
-            List<Path> paths = new ArrayList<>();
-            Path path1 = new Path();
-            path1.setId(null);
-            path1.setPath(arr.get(0));
-            Path path2 = new Path();
-            path2.setId(null);
-            path2.setPath(arr.get(1));
-            paths.add(path1);
-            paths.add(path2);
-            pathsRepository.save(path1);
-            pathsRepository.save(path2);
+            List<PathDto> paths = new ArrayList<>();
+            PathDto pathDto1 = PathDto.builder()
+                    .path(arr.get(0))
+                    .build();
+            PathDto pathDto2 = PathDto.builder()
+                    .path(arr.get(1))
+                    .build();
+            paths.add(dtoMethods.getPathDto(
+                    pathsRepository.save(dtoMethods.getPath(pathDto1)))
+            );
+            paths.add(dtoMethods.getPathDto(
+                    pathsRepository.save(dtoMethods.getPath(pathDto2)))
+            );
 
-            Intersection intersection = new Intersection();
-            intersection.setId(null);
-            List<Name> names = new ArrayList<>();
+            IntersectionDto intersectionDto = new IntersectionDto();
+            List<NameDto> names = new ArrayList<>();
             for (int i = 2; i < arr.size(); i++) {
 
                 String[] parse = arr.get(i).split(" ");
-                Name name = new Name();
-                name.setId(null);
-                name.setFirstName(parse[0]);
-                name.setMiddleName(parse[1]);
-                name.setLastName(parse[2]);
-                namesRepository.save(name);
-                names.add(name);
+                NameDto nameDto = NameDto.builder()
+                        .firstName(parse[0])
+                        .middleName(parse[1])
+                        .lastName(parse[1])
+                        .build();
+                names.add(dtoMethods.getNameDto(
+                        namesRepository.save(dtoMethods.getName(nameDto)))
+                );
             }
-            intersection.setNames(names);
-            intersection.setPaths(paths);
-            intersectionRepository.save(intersection);
-            intersections.add(intersection);
+            intersectionDto.setNames(names);
+            intersectionDto.setPaths(paths);
+            intersections.add(dtoMethods.getIntersectionDto(
+                    intersectionRepository.save(dtoMethods.getIntersection(intersectionDto))
+            ));
         }
-        result.setIntersectionList(intersections);
-        result.setStates(States.READY);
-        resultRepository.save(result);
     }
 }
