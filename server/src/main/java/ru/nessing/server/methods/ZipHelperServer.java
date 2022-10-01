@@ -1,16 +1,9 @@
 package ru.nessing.server.methods;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.poi.openxml4j.opc.OPCPackage;
-import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.regex.Matcher;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -63,56 +56,12 @@ public class ZipHelperServer {
                 parseFolder(fileEntry);
             } else {
                 String format = FilenameUtils.getExtension(fileEntry.getAbsolutePath());
-                switch (format) {
-                    case ("docx") :
-                        docx(fileEntry);
-                        break;
-                    case ("txt") :
-                        txt(fileEntry);
-                        break;
-                }
+                arrayNames.add(ParseDocx.parse(format, fileEntry, pattern));
+                arrayNames.add(ParseTxt.parse(format, fileEntry, pattern));
             }
         }
+        arrayNames.removeAll(Collections.singleton(null));
         return collect(arrayNames);
-    }
-
-    private void docx(File fileEntry) {
-        ArrayList<String> strings = new ArrayList<>();
-        try {
-            FileInputStream fis = new FileInputStream(fileEntry.getAbsolutePath());
-            XWPFDocument xdoc = new XWPFDocument(OPCPackage.open(fis));
-            XWPFWordExtractor extractor = new XWPFWordExtractor(xdoc);
-
-            strings.add(fileEntry.getAbsolutePath());
-            Matcher matcher = pattern.matcher(extractor.getText());
-            while (matcher.find()) {
-                strings.add(matcher.group());
-            }
-            fis.close();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        arrayNames.add(strings);
-    }
-
-    private void txt(File fileEntry) {
-        ArrayList<String> strings = new ArrayList<>();
-        try {
-            BufferedReader reader = new BufferedReader(new FileReader(fileEntry));
-            strings.add(fileEntry.getAbsolutePath());
-            while (reader.ready()) {
-                Matcher matcher = pattern.matcher(reader.readLine());
-                while (matcher.find()) {
-                    strings.add(matcher.group());
-                }
-            }
-            reader.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        arrayNames.add(strings);
     }
 
     public List<List<String>> collect(List<ArrayList<String>> array) {
