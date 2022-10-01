@@ -51,6 +51,7 @@ public class ZipHelperServer implements CollectInterface, ParseFolderInterface, 
         }
     }
 
+    @Override
     public List<List<String>> parseFolder(File folder) {
         if (!folder.exists()) {
             try {
@@ -72,6 +73,7 @@ public class ZipHelperServer implements CollectInterface, ParseFolderInterface, 
         return collect(arrayNames);
     }
 
+    @Override
     public List<List<String>> collect(List<ArrayList<String>> array) {
         List<List<String>> all = new ArrayList<>();
         List<String> innerList = new ArrayList<>();
