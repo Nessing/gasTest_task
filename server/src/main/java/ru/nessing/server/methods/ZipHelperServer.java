@@ -1,6 +1,9 @@
 package ru.nessing.server.methods;
 
 import org.apache.commons.io.FilenameUtils;
+import ru.nessing.server.interfaces.CollectInterface;
+import ru.nessing.server.interfaces.ParseFolderInterface;
+import ru.nessing.server.interfaces.UnzipInterface;
 
 import java.io.*;
 import java.util.*;
@@ -8,10 +11,11 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-public class ZipHelperServer {
+public class ZipHelperServer implements CollectInterface, ParseFolderInterface, UnzipInterface {
     private static List<ArrayList<String>> arrayNames = new ArrayList<>();
     private final Pattern pattern = Pattern.compile("([A-ZА-Я][a-zа-я]+ [A-ZА-Я][a-zа-я]+ [A-ZА-Я][a-zа-я]+)");
 
+    @Override
     public void unzip(String zipFilePath, String destDir) {
         File dir = new File(destDir);
         // create output directory if it doesn't exist
@@ -47,9 +51,13 @@ public class ZipHelperServer {
         }
     }
 
-    public List<List<String>> parseFolder(File folder) throws FileNotFoundException {
+    public List<List<String>> parseFolder(File folder) {
         if (!folder.exists()) {
-            throw new FileNotFoundException("File not found");
+            try {
+                throw new FileNotFoundException("File not found");
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
         }
         for (final File fileEntry : folder.listFiles()) {
             if (fileEntry.isDirectory()) {
