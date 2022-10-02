@@ -65,8 +65,8 @@ public class ZipHelperServer implements CollectInterface, ParseFolderInterface, 
                 parseFolder(fileEntry);
             } else {
                 String format = FilenameUtils.getExtension(fileEntry.getAbsolutePath());
-                arrayNames.add(ParseDocx.parse(format, fileEntry, pattern));
-                arrayNames.add(ParseTxt.parse(format, fileEntry, pattern));
+                arrayNames.add(new ParseDocx().parse(format, fileEntry, pattern));
+                arrayNames.add(new ParseTxt().parse(format, fileEntry, pattern));
             }
         }
         arrayNames.removeAll(Collections.singleton(null));
